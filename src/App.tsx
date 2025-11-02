@@ -1,17 +1,13 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
-import ProtectedRoute from './components/ProtectedRoute';
-import DashboardLayout from './components/DashboardLayout';
-import Login from './components/Login';
-import Dashboard from './pages/Dashboard';
-import Team from './pages/Team';
-import Projects from './pages/Projects';
-import Calendar from './pages/Calendar';
-import Documents from './pages/Documents';
-import Reports from './pages/Reports';
-import UserManagement from './pages/UserManagement';
-import RoleManagement from './pages/RoleManagement';
+import React from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import ProtectedRoute from "./components/ProtectedRoute";
+import DashboardLayout from "./components/DashboardLayout";
+import Login from "./components/Login";
+import Dashboard from "./pages/Dashboard";
+import Reports from "./pages/Reports";
+import UserManagement from "./pages/UserManagement";
+import AppSettings from "./pages/AppSettings";
 
 const AppRoutes: React.FC = () => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -26,10 +22,7 @@ const AppRoutes: React.FC = () => {
 
   return (
     <Routes>
-      <Route 
-        path="/login" 
-        element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />} 
-      />
+      <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />} />
       <Route
         path="/dashboard"
         element={
@@ -41,41 +34,11 @@ const AppRoutes: React.FC = () => {
         }
       />
       <Route
-        path="/team"
+        path="/settings"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["admin"]}>
             <DashboardLayout>
-              <Team />
-            </DashboardLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/projects"
-        element={
-          <ProtectedRoute>
-            <DashboardLayout>
-              <Projects />
-            </DashboardLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/calendar"
-        element={
-          <ProtectedRoute>
-            <DashboardLayout>
-              <Calendar />
-            </DashboardLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/documents"
-        element={
-          <ProtectedRoute>
-            <DashboardLayout>
-              <Documents />
+              <AppSettings />
             </DashboardLayout>
           </ProtectedRoute>
         }
@@ -83,7 +46,7 @@ const AppRoutes: React.FC = () => {
       <Route
         path="/reports"
         element={
-          <ProtectedRoute allowedRoles={['admin', 'manager', 'accountant']}>
+          <ProtectedRoute allowedRoles={["admin", "manager", "accountant"]}>
             <DashboardLayout>
               <Reports />
             </DashboardLayout>
@@ -93,19 +56,9 @@ const AppRoutes: React.FC = () => {
       <Route
         path="/users"
         element={
-          <ProtectedRoute allowedRoles={['admin']}>
+          <ProtectedRoute allowedRoles={["admin"]}>
             <DashboardLayout>
               <UserManagement />
-            </DashboardLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/roles"
-        element={
-          <ProtectedRoute allowedRoles={['admin']}>
-            <DashboardLayout>
-              <RoleManagement />
             </DashboardLayout>
           </ProtectedRoute>
         }
