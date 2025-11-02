@@ -5,6 +5,10 @@ export interface User {
   name: string;
   lastName: string;
   chileanRutNumber?: string;
+  color?: string;
+  lastLogin?: string;
+  createdAt?: string;
+  createdBy?: number;
   roles: string[];
 }
 
@@ -51,6 +55,7 @@ export interface UpdateUserRequest {
   name?: string;
   lastName?: string;
   chileanRutNumber?: string;
+  color?: string;
 }
 
 export interface ChangePasswordRequest {
