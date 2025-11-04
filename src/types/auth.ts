@@ -79,3 +79,29 @@ export interface ApiResponse<T = any> {
   [key: string]: any;
 }
 
+export type EmailProvider = 'GMAIL' | 'OUTLOOK';
+
+export interface EmailSender {
+  id: number;
+  email: string;
+  emailProvider: EmailProvider;
+  createdAt: string;
+}
+
+export interface CreateEmailRequest {
+  email: string;
+  emailProvider: EmailProvider;
+}
+
+export interface UpdateEmailRequest {
+  email?: string;
+  emailProvider?: EmailProvider;
+}
+
+export interface SendTestEmailRequest {
+  fromEmail: string;
+  toEmail: string;
+  subject: string;
+  content: string;
+}
+
