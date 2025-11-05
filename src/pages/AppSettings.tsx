@@ -17,17 +17,27 @@ const AppSettings: React.FC = () => {
   const [emailFormData, setEmailFormData] = useState({
     email: "",
     emailProvider: "GMAIL" as EmailProvider,
+    refreshToken: "",
+    aliases: [] as string[],
   });
+  const [aliasInput, setAliasInput] = useState("");
 
   // Test email dialog state
   const [testEmailDialogOpen, setTestEmailDialogOpen] = useState(false);
   const [testEmailFormData, setTestEmailFormData] = useState({
     fromEmail: "",
-    toEmail: "",
+    toEmails: [] as string[],
+    ccEmails: [] as string[],
+    bccEmails: [] as string[],
     subject: "",
     content: "",
+    attachments: [] as File[],
   });
   const [sendingTestEmail, setSendingTestEmail] = useState(false);
+  const [toEmailInput, setToEmailInput] = useState("");
+  const [ccEmailInput, setCcEmailInput] = useState("");
+  const [bccEmailInput, setBccEmailInput] = useState("");
+  const [selectedAlias, setSelectedAlias] = useState("");
 
   useEffect(() => {
     loadEmails();
@@ -49,7 +59,8 @@ const AppSettings: React.FC = () => {
   const openAddEmailDialog = () => {
     setSelectedEmail(null);
     setIsEditMode(false);
-    setEmailFormData({ email: "", emailProvider: "GMAIL" });
+    setEmailFormData({ email: "", emailProvider: "GMAIL", refreshToken: "", aliases: [] });
+    setAliasInput("");
     setEmailDialogOpen(true);
     setError(null);
     setSuccess(null);
@@ -61,7 +72,10 @@ const AppSettings: React.FC = () => {
     setEmailFormData({
       email: email.email,
       emailProvider: email.emailProvider,
+      refreshToken: email.refreshToken || "",
+      aliases: email.aliases || [],
     });
+    setAliasInput("");
     setEmailDialogOpen(true);
     setError(null);
     setSuccess(null);
@@ -71,7 +85,8 @@ const AppSettings: React.FC = () => {
     setEmailDialogOpen(false);
     setSelectedEmail(null);
     setIsEditMode(false);
-    setEmailFormData({ email: "", emailProvider: "GMAIL" });
+    setEmailFormData({ email: "", emailProvider: "GMAIL", refreshToken: "", aliases: [] });
+    setAliasInput("");
     setError(null);
     setSuccess(null);
   };
@@ -89,6 +104,8 @@ const AppSettings: React.FC = () => {
         const updateData: UpdateEmailRequest = {
           email: emailFormData.email,
           emailProvider: emailFormData.emailProvider,
+          refreshToken: emailFormData.refreshToken || undefined,
+          aliases: emailFormData.aliases.length > 0 ? emailFormData.aliases : undefined,
         };
         await emailService.updateEmail(selectedEmail.id, updateData);
         setSuccess("Email sender updated successfully");
@@ -96,6 +113,8 @@ const AppSettings: React.FC = () => {
         const createData: CreateEmailRequest = {
           email: emailFormData.email,
           emailProvider: emailFormData.emailProvider,
+          refreshToken: emailFormData.refreshToken || undefined,
+          aliases: emailFormData.aliases.length > 0 ? emailFormData.aliases : undefined,
         };
         await emailService.createEmail(createData);
         setSuccess("Email sender created successfully");
@@ -131,10 +150,17 @@ const AppSettings: React.FC = () => {
     }
     setTestEmailFormData({
       fromEmail: emails[0]?.email || "",
-      toEmail: "",
+      toEmails: [],
+      ccEmails: [],
+      bccEmails: [],
       subject: "Test Email",
       content: "This is a test email from the application.",
+      attachments: [],
     });
+    setToEmailInput("");
+    setCcEmailInput("");
+    setBccEmailInput("");
+    setSelectedAlias("");
     setTestEmailDialogOpen(true);
     setError(null);
     setSuccess(null);
@@ -144,12 +170,122 @@ const AppSettings: React.FC = () => {
     setTestEmailDialogOpen(false);
     setTestEmailFormData({
       fromEmail: emails[0]?.email || "",
-      toEmail: "",
+      toEmails: [],
+      ccEmails: [],
+      bccEmails: [],
       subject: "Test Email",
       content: "This is a test email from the application.",
+      attachments: [],
     });
+    setToEmailInput("");
+    setCcEmailInput("");
+    setBccEmailInput("");
+    setSelectedAlias("");
     setError(null);
     setSuccess(null);
+  };
+
+  const addAlias = () => {
+    const trimmedAlias = aliasInput.trim();
+    if (!trimmedAlias) {
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedAlias)) {
+      setError(`Invalid alias email format: ${trimmedAlias}`);
+      return;
+    }
+
+    const normalizedAlias = trimmedAlias.toLowerCase();
+    if (normalizedAlias === emailFormData.email.toLowerCase()) {
+      setError("Alias cannot be the same as the main email");
+      return;
+    }
+
+    if (emailFormData.aliases.includes(normalizedAlias)) {
+      setError("Alias already exists");
+      return;
+    }
+
+    setEmailFormData({
+      ...emailFormData,
+      aliases: [...emailFormData.aliases, normalizedAlias],
+    });
+    setAliasInput("");
+    setError(null);
+  };
+
+  const removeAlias = (alias: string) => {
+    setEmailFormData({
+      ...emailFormData,
+      aliases: emailFormData.aliases.filter(a => a !== alias),
+    });
+  };
+
+  const addEmailToArray = (email: string, array: string[]) => {
+    const trimmedEmail = email.trim();
+    if (trimmedEmail && !array.includes(trimmedEmail)) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (emailRegex.test(trimmedEmail)) {
+        return [...array, trimmedEmail];
+      } else {
+        setError(`Invalid email format: ${trimmedEmail}`);
+        return null;
+      }
+    }
+    return array;
+  };
+
+  const addToEmail = () => {
+    const result = addEmailToArray(toEmailInput, testEmailFormData.toEmails);
+    if (result !== null) {
+      setTestEmailFormData({ ...testEmailFormData, toEmails: result });
+      setToEmailInput("");
+    }
+  };
+
+  const addCcEmail = () => {
+    const result = addEmailToArray(ccEmailInput, testEmailFormData.ccEmails);
+    if (result !== null) {
+      setTestEmailFormData({ ...testEmailFormData, ccEmails: result });
+      setCcEmailInput("");
+    }
+  };
+
+  const addBccEmail = () => {
+    const result = addEmailToArray(bccEmailInput, testEmailFormData.bccEmails);
+    if (result !== null) {
+      setTestEmailFormData({ ...testEmailFormData, bccEmails: result });
+      setBccEmailInput("");
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const allowedTypes = ['application/pdf', 'text/csv', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
+    const allowedExtensions = ['.pdf', '.csv', '.xls', '.xlsx'];
+    
+    const validFiles = files.filter(file => {
+      const ext = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+      return allowedTypes.includes(file.type) || allowedExtensions.includes(ext);
+    });
+
+    if (validFiles.length !== files.length) {
+      setError("Some files were rejected. Only PDF, CSV, and XLSX files are allowed.");
+    }
+
+    setTestEmailFormData({
+      ...testEmailFormData,
+      attachments: [...testEmailFormData.attachments, ...validFiles],
+    });
+  };
+
+  const removeAttachment = (index: number) => {
+    setTestEmailFormData({
+      ...testEmailFormData,
+      attachments: testEmailFormData.attachments.filter((_, i) => i !== index),
+    });
   };
 
   const handleSendTestEmail = async () => {
@@ -157,17 +293,58 @@ const AppSettings: React.FC = () => {
       setError(null);
       setSendingTestEmail(true);
 
-      if (!testEmailFormData.fromEmail || !testEmailFormData.toEmail || !testEmailFormData.subject || !testEmailFormData.content) {
-        setError("All fields are required");
+      // Add any pending email inputs to arrays
+      let toEmails = [...testEmailFormData.toEmails];
+      let ccEmails = [...testEmailFormData.ccEmails];
+      let bccEmails = [...testEmailFormData.bccEmails];
+
+      if (toEmailInput.trim()) {
+        const result = addEmailToArray(toEmailInput, toEmails);
+        if (result === null) {
+          setSendingTestEmail(false);
+          return;
+        }
+        toEmails = result;
+      }
+
+      if (ccEmailInput.trim()) {
+        const result = addEmailToArray(ccEmailInput, ccEmails);
+        if (result === null) {
+          setSendingTestEmail(false);
+          return;
+        }
+        ccEmails = result;
+      }
+
+      if (bccEmailInput.trim()) {
+        const result = addEmailToArray(bccEmailInput, bccEmails);
+        if (result === null) {
+          setSendingTestEmail(false);
+          return;
+        }
+        bccEmails = result;
+      }
+
+      if (!testEmailFormData.fromEmail || toEmails.length === 0 || !testEmailFormData.subject || !testEmailFormData.content) {
+        setError("From email, at least one recipient, subject, and content are required");
         setSendingTestEmail(false);
         return;
       }
 
+      // Determine the actual fromEmail: use selected alias if available, otherwise use main email
+      const selectedEmailSender = emails.find(e => e.email === testEmailFormData.fromEmail);
+      const actualFromEmail = selectedAlias && selectedEmailSender?.aliases?.includes(selectedAlias)
+        ? selectedAlias
+        : testEmailFormData.fromEmail;
+
       const testEmailData: SendTestEmailRequest = {
-        fromEmail: testEmailFormData.fromEmail,
-        toEmail: testEmailFormData.toEmail,
+        fromEmail: actualFromEmail,
+        toEmails: toEmails,
+        ccEmails: ccEmails.length > 0 ? ccEmails : undefined,
+        bccEmails: bccEmails.length > 0 ? bccEmails : undefined,
         subject: testEmailFormData.subject,
         content: testEmailFormData.content,
+        attachments: testEmailFormData.attachments.length > 0 ? testEmailFormData.attachments : undefined,
       };
 
       await emailService.sendTestEmail(testEmailData);
@@ -374,6 +551,80 @@ const AppSettings: React.FC = () => {
                               </select>
                             </div>
                           </div>
+
+                          <div>
+                            <label htmlFor="refreshToken" className="block text-sm/6 font-medium text-gray-900">
+                              Refresh Token (Optional)
+                            </label>
+                            <div className="mt-2">
+                              <input
+                                id="refreshToken"
+                                name="refreshToken"
+                                type="password"
+                                value={emailFormData.refreshToken}
+                                onChange={(e) => setEmailFormData({ ...emailFormData, refreshToken: e.target.value })}
+                                className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600 sm:text-sm/6"
+                                placeholder="Enter OAuth2 refresh token"
+                              />
+                              <p className="mt-1 text-xs text-gray-500">
+                                Required for sending emails. Add this when creating or updating the email sender.
+                              </p>
+                            </div>
+                          </div>
+
+                          <div>
+                            <label htmlFor="alias" className="block text-sm/6 font-medium text-gray-900">
+                              Email Aliases
+                            </label>
+                            <div className="mt-2">
+                              <div className="flex gap-2">
+                                <input
+                                  id="alias"
+                                  name="alias"
+                                  type="email"
+                                  value={aliasInput}
+                                  onChange={(e) => setAliasInput(e.target.value)}
+                                  onKeyPress={(e) => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                      addAlias();
+                                    }
+                                  }}
+                                  className="flex-1 rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600 sm:text-sm/6"
+                                  placeholder="alias@example.com"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={addAlias}
+                                  className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-500"
+                                >
+                                  Add
+                                </button>
+                              </div>
+                              {emailFormData.aliases.length > 0 && (
+                                <div className="mt-2 space-y-1">
+                                  {emailFormData.aliases.map((alias, idx) => (
+                                    <div
+                                      key={idx}
+                                      className="flex items-center justify-between rounded-md bg-gray-50 px-2 py-1 text-sm text-gray-700"
+                                    >
+                                      <span>{alias}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => removeAlias(alias)}
+                                        className="text-red-600 hover:text-red-800"
+                                      >
+                                        Remove
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              <p className="mt-1 text-xs text-gray-500">
+                                Add email aliases that can be used as the "from" address when sending emails.
+                              </p>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -458,7 +709,10 @@ const AppSettings: React.FC = () => {
                                 id="fromEmail"
                                 name="fromEmail"
                                 value={testEmailFormData.fromEmail}
-                                onChange={(e) => setTestEmailFormData({ ...testEmailFormData, fromEmail: e.target.value })}
+                                onChange={(e) => {
+                                  setTestEmailFormData({ ...testEmailFormData, fromEmail: e.target.value });
+                                  setSelectedAlias(""); // Reset alias when email sender changes
+                                }}
                                 className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600 sm:text-sm/6"
                               >
                                 {emails.map((email) => (
@@ -470,20 +724,192 @@ const AppSettings: React.FC = () => {
                             </div>
                           </div>
 
+                          {(() => {
+                            const selectedEmailSender = emails.find(e => e.email === testEmailFormData.fromEmail);
+                            const hasAliases = selectedEmailSender?.aliases && selectedEmailSender.aliases.length > 0;
+                            
+                            if (!hasAliases) {
+                              return null;
+                            }
+
+                            return (
+                              <div>
+                                <label htmlFor="alias" className="block text-sm/6 font-medium text-gray-900">
+                                  Alias
+                                </label>
+                                <div className="mt-2">
+                                  <select
+                                    id="alias"
+                                    name="alias"
+                                    value={selectedAlias}
+                                    onChange={(e) => setSelectedAlias(e.target.value)}
+                                    className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600 sm:text-sm/6"
+                                  >
+                                    <option value="">{selectedEmailSender?.email} (Main Email)</option>
+                                    {selectedEmailSender?.aliases?.map((alias, idx) => (
+                                      <option key={idx} value={alias}>
+                                        {alias} (Alias)
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <p className="mt-1 text-xs text-gray-500">
+                                    Select an alias to send from, or use the main email.
+                                  </p>
+                                </div>
+                              </div>
+                            );
+                          })()}
+
                           <div>
                             <label htmlFor="toEmail" className="block text-sm/6 font-medium text-gray-900">
-                              To Email
+                              To Email(s) *
                             </label>
                             <div className="mt-2">
-                              <input
-                                id="toEmail"
-                                name="toEmail"
-                                type="email"
-                                value={testEmailFormData.toEmail}
-                                onChange={(e) => setTestEmailFormData({ ...testEmailFormData, toEmail: e.target.value })}
-                                className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600 sm:text-sm/6"
-                                placeholder="recipient@example.com"
-                              />
+                              <div className="flex gap-2">
+                                <input
+                                  id="toEmail"
+                                  name="toEmail"
+                                  type="email"
+                                  value={toEmailInput}
+                                  onChange={(e) => setToEmailInput(e.target.value)}
+                                  onKeyPress={(e) => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                      addToEmail();
+                                    }
+                                  }}
+                                  className="flex-1 rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600 sm:text-sm/6"
+                                  placeholder="recipient@example.com"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={addToEmail}
+                                  className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-500"
+                                >
+                                  Add
+                                </button>
+                              </div>
+                              {testEmailFormData.toEmails.length > 0 && (
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                  {testEmailFormData.toEmails.map((email, idx) => (
+                                    <span
+                                      key={idx}
+                                      className="inline-flex items-center gap-1 rounded-md bg-gray-100 px-2 py-1 text-xs text-gray-700"
+                                    >
+                                      {email}
+                                      <button
+                                        type="button"
+                                        onClick={() => setTestEmailFormData({ ...testEmailFormData, toEmails: testEmailFormData.toEmails.filter((_, i) => i !== idx) })}
+                                        className="text-gray-500 hover:text-gray-700"
+                                      >
+                                        ×
+                                      </button>
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div>
+                            <label htmlFor="ccEmail" className="block text-sm/6 font-medium text-gray-900">
+                              CC Email(s)
+                            </label>
+                            <div className="mt-2">
+                              <div className="flex gap-2">
+                                <input
+                                  id="ccEmail"
+                                  name="ccEmail"
+                                  type="email"
+                                  value={ccEmailInput}
+                                  onChange={(e) => setCcEmailInput(e.target.value)}
+                                  onKeyPress={(e) => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                      addCcEmail();
+                                    }
+                                  }}
+                                  className="flex-1 rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600 sm:text-sm/6"
+                                  placeholder="cc@example.com"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={addCcEmail}
+                                  className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-500"
+                                >
+                                  Add
+                                </button>
+                              </div>
+                              {testEmailFormData.ccEmails.length > 0 && (
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                  {testEmailFormData.ccEmails.map((email, idx) => (
+                                    <span
+                                      key={idx}
+                                      className="inline-flex items-center gap-1 rounded-md bg-gray-100 px-2 py-1 text-xs text-gray-700"
+                                    >
+                                      {email}
+                                      <button
+                                        type="button"
+                                        onClick={() => setTestEmailFormData({ ...testEmailFormData, ccEmails: testEmailFormData.ccEmails.filter((_, i) => i !== idx) })}
+                                        className="text-gray-500 hover:text-gray-700"
+                                      >
+                                        ×
+                                      </button>
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div>
+                            <label htmlFor="bccEmail" className="block text-sm/6 font-medium text-gray-900">
+                              BCC Email(s)
+                            </label>
+                            <div className="mt-2">
+                              <div className="flex gap-2">
+                                <input
+                                  id="bccEmail"
+                                  name="bccEmail"
+                                  type="email"
+                                  value={bccEmailInput}
+                                  onChange={(e) => setBccEmailInput(e.target.value)}
+                                  onKeyPress={(e) => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                      addBccEmail();
+                                    }
+                                  }}
+                                  className="flex-1 rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600 sm:text-sm/6"
+                                  placeholder="bcc@example.com"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={addBccEmail}
+                                  className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-500"
+                                >
+                                  Add
+                                </button>
+                              </div>
+                              {testEmailFormData.bccEmails.length > 0 && (
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                  {testEmailFormData.bccEmails.map((email, idx) => (
+                                    <span
+                                      key={idx}
+                                      className="inline-flex items-center gap-1 rounded-md bg-gray-100 px-2 py-1 text-xs text-gray-700"
+                                    >
+                                      {email}
+                                      <button
+                                        type="button"
+                                        onClick={() => setTestEmailFormData({ ...testEmailFormData, bccEmails: testEmailFormData.bccEmails.filter((_, i) => i !== idx) })}
+                                        className="text-gray-500 hover:text-gray-700"
+                                      >
+                                        ×
+                                      </button>
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           </div>
 
@@ -518,6 +944,42 @@ const AppSettings: React.FC = () => {
                                 className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600 sm:text-sm/6"
                                 placeholder="Email message content"
                               />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label htmlFor="attachments" className="block text-sm/6 font-medium text-gray-900">
+                              Attachments (PDF, CSV, XLSX)
+                            </label>
+                            <div className="mt-2">
+                              <input
+                                id="attachments"
+                                name="attachments"
+                                type="file"
+                                multiple
+                                accept=".pdf,.csv,.xls,.xlsx"
+                                onChange={handleFileChange}
+                                className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600 sm:text-sm/6"
+                              />
+                              {testEmailFormData.attachments.length > 0 && (
+                                <div className="mt-2 space-y-1">
+                                  {testEmailFormData.attachments.map((file, idx) => (
+                                    <div
+                                      key={idx}
+                                      className="flex items-center justify-between rounded-md bg-gray-50 px-2 py-1 text-sm text-gray-700"
+                                    >
+                                      <span>{file.name}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => removeAttachment(idx)}
+                                        className="text-red-600 hover:text-red-800"
+                                      >
+                                        Remove
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>

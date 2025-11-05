@@ -85,23 +85,32 @@ export interface EmailSender {
   id: number;
   email: string;
   emailProvider: EmailProvider;
+  refreshToken?: string;
+  aliases?: string[];
   createdAt: string;
 }
 
 export interface CreateEmailRequest {
   email: string;
   emailProvider: EmailProvider;
+  refreshToken?: string;
+  aliases?: string[];
 }
 
 export interface UpdateEmailRequest {
   email?: string;
   emailProvider?: EmailProvider;
+  refreshToken?: string;
+  aliases?: string[];
 }
 
 export interface SendTestEmailRequest {
   fromEmail: string;
-  toEmail: string;
+  toEmails: string[];
+  ccEmails?: string[];
+  bccEmails?: string[];
   subject: string;
   content: string;
+  attachments?: File[];
 }
 
