@@ -5,10 +5,11 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: "#7ad9c5",
-        secondary: "#220070",
+        primary: "#220070",
+        secondary: "#7ad9c5",
       },
     },
   },
+  darkMode: "class",
   plugins: [],
 };
