@@ -104,12 +104,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
 
             {/* Sidebar component, swap this element with another sidebar if you like */}
             <div className="relative flex grow flex-col gap-y-5 overflow-y-auto bg-white px-6 pb-4">
-              <div className="relative flex h-16 shrink-0 items-center">
-                <img
-                  alt="Your Company"
-                  src="https://tailwindcss.com/plus-assets/img/logos/mark.svg?color=indigo&shade=600"
-                  className="h-8 w-auto"
-                />
+              <div className="flex h-16 shrink-0 items-center my-2 -ml-9">
+                <img alt="PavleTek" src="src\assets\Transparent_Image_1.png" className="max-w-[70%]" />
               </div>
               <nav className="relative flex flex-1 flex-col">
                 <ul role="list" className="flex flex-1 flex-col gap-y-7">
@@ -172,13 +168,9 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
       <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-72 lg:flex-col dark">
         {/* Sidebar component, swap this element with another sidebar if you like */}
         <div className="flex grow flex-col gap-y-5 overflow-y-auto border-r border-gray-200 bg-white px-6 pb-4">
-          <div className="flex h-16 shrink-0 items-center">
-            <img
-              alt="Your Company"
-              src="https://tailwindcss.com/plus-assets/img/logos/mark.svg?color=violet&shade=900"
-              className="h-8 w-auto"
-            />
-          </div>
+              <div className="flex h-16 shrink-0 items-center my-2 -ml-8">
+                <img alt="PavleTek" src="src\assets\Transparent_Image_1.png" className="max-w-[72%]" />
+              </div>
           <nav className="flex flex-1 flex-col">
             <ul role="list" className="flex flex-1 flex-col gap-y-7">
               <li>
@@ -197,9 +189,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                         <item.icon
                           aria-hidden={true}
                           className={classNames(
-                            location.pathname === item.href
-                              ? "text-primary"
-                              : "text-gray-400 group-hover:text-primary",
+                            location.pathname === item.href ? "text-primary" : "text-gray-400 group-hover:text-primary",
                             "size-6 shrink-0"
                           )}
                         />
