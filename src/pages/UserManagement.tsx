@@ -291,7 +291,7 @@ const UserManagement: React.FC = () => {
                           <button
                             type="button"
                             onClick={closeDialog}
-                            className="relative rounded-md text-primary-200 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white cursor-pointer"
+                            className="relative rounded-md text-primary-100 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white cursor-pointer"
                           >
                             <span className="absolute -inset-2.5" />
                             <span className="sr-only">Close panel</span>

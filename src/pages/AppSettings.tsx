@@ -2,14 +2,20 @@ import React, { useState, useEffect } from "react";
 import { XMarkIcon, TrashIcon, PencilIcon } from "@heroicons/react/24/outline";
 import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
 import { emailService } from "../services/emailService";
-import type { EmailSender, EmailProvider, CreateEmailRequest, UpdateEmailRequest, SendTestEmailRequest } from "../types";
+import type {
+  EmailSender,
+  EmailProvider,
+  CreateEmailRequest,
+  UpdateEmailRequest,
+  SendTestEmailRequest,
+} from "../types";
 
 const AppSettings: React.FC = () => {
   const [emails, setEmails] = useState<EmailSender[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  
+
   // Email management dialog state
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [selectedEmail, setSelectedEmail] = useState<EmailSender | null>(null);
@@ -94,7 +100,7 @@ const AppSettings: React.FC = () => {
   const handleSaveEmail = async () => {
     try {
       setError(null);
-      
+
       if (!emailFormData.email) {
         setError("Email is required");
         return;
@@ -219,7 +225,7 @@ const AppSettings: React.FC = () => {
   const removeAlias = (alias: string) => {
     setEmailFormData({
       ...emailFormData,
-      aliases: emailFormData.aliases.filter(a => a !== alias),
+      aliases: emailFormData.aliases.filter((a) => a !== alias),
     });
   };
 
@@ -263,11 +269,16 @@ const AppSettings: React.FC = () => {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    const allowedTypes = ['application/pdf', 'text/csv', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
-    const allowedExtensions = ['.pdf', '.csv', '.xls', '.xlsx'];
-    
-    const validFiles = files.filter(file => {
-      const ext = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+    const allowedTypes = [
+      "application/pdf",
+      "text/csv",
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ];
+    const allowedExtensions = [".pdf", ".csv", ".xls", ".xlsx"];
+
+    const validFiles = files.filter((file) => {
+      const ext = file.name.toLowerCase().substring(file.name.lastIndexOf("."));
       return allowedTypes.includes(file.type) || allowedExtensions.includes(ext);
     });
 
@@ -325,17 +336,23 @@ const AppSettings: React.FC = () => {
         bccEmails = result;
       }
 
-      if (!testEmailFormData.fromEmail || toEmails.length === 0 || !testEmailFormData.subject || !testEmailFormData.content) {
+      if (
+        !testEmailFormData.fromEmail ||
+        toEmails.length === 0 ||
+        !testEmailFormData.subject ||
+        !testEmailFormData.content
+      ) {
         setError("From email, at least one recipient, subject, and content are required");
         setSendingTestEmail(false);
         return;
       }
 
       // Determine the actual fromEmail: use selected alias if available, otherwise use main email
-      const selectedEmailSender = emails.find(e => e.email === testEmailFormData.fromEmail);
-      const actualFromEmail = selectedAlias && selectedEmailSender?.aliases?.includes(selectedAlias)
-        ? selectedAlias
-        : testEmailFormData.fromEmail;
+      const selectedEmailSender = emails.find((e) => e.email === testEmailFormData.fromEmail);
+      const actualFromEmail =
+        selectedAlias && selectedEmailSender?.aliases?.includes(selectedAlias)
+          ? selectedAlias
+          : testEmailFormData.fromEmail;
 
       const testEmailData: SendTestEmailRequest = {
         fromEmail: actualFromEmail,
@@ -349,7 +366,7 @@ const AppSettings: React.FC = () => {
 
       await emailService.sendTestEmail(testEmailData);
       setSuccess("Test email sent successfully!");
-      
+
       setTimeout(() => {
         closeTestEmailDialog();
       }, 2000);
@@ -361,9 +378,7 @@ const AppSettings: React.FC = () => {
   };
 
   const getProviderBadgeColor = (provider: EmailProvider) => {
-    return provider === "GMAIL" 
-      ? "bg-red-100 text-red-800" 
-      : "bg-blue-100 text-blue-800";
+    return provider === "GMAIL" ? "bg-red-100 text-red-800" : "bg-blue-100 text-blue-800";
   };
 
   const hasEmailFormChanges = (): boolean => {
@@ -374,12 +389,12 @@ const AppSettings: React.FC = () => {
     // Compare current form data with original email data
     const originalAliases = selectedEmail.aliases || [];
     const currentAliases = emailFormData.aliases || [];
-    
+
     // Check if arrays are different (order doesn't matter, but we'll do simple comparison)
-    const aliasesChanged = 
+    const aliasesChanged =
       originalAliases.length !== currentAliases.length ||
-      !originalAliases.every(alias => currentAliases.includes(alias)) ||
-      !currentAliases.every(alias => originalAliases.includes(alias));
+      !originalAliases.every((alias) => currentAliases.includes(alias)) ||
+      !currentAliases.every((alias) => originalAliases.includes(alias));
 
     return (
       emailFormData.email !== selectedEmail.email ||
@@ -404,7 +419,9 @@ const AppSettings: React.FC = () => {
       </div>
 
       {error && <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md text-red-700">{error}</div>}
-      {success && <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-md text-green-700">{success}</div>}
+      {success && (
+        <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-md text-green-700">{success}</div>
+      )}
 
       {/* Email Senders Section */}
       <div className="mb-8">
@@ -413,7 +430,7 @@ const AppSettings: React.FC = () => {
           <button
             type="button"
             onClick={openAddEmailDialog}
-            className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 cursor-pointer"
+            className="inline-flex items-center rounded-md bg-primary-800 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-800 cursor-pointer"
           >
             Add Email Sender
           </button>
@@ -442,7 +459,9 @@ const AppSettings: React.FC = () => {
                     </div>
                     <div className="flex shrink-0 items-center gap-x-4">
                       <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getProviderBadgeColor(email.emailProvider)}`}
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getProviderBadgeColor(
+                          email.emailProvider
+                        )}`}
                       >
                         {email.emailProvider}
                       </span>
@@ -479,7 +498,7 @@ const AppSettings: React.FC = () => {
             type="button"
             onClick={openTestEmailDialog}
             disabled={emails.length === 0}
-            className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:bg-gray-300 disabled:cursor-not-allowed cursor-pointer"
+            className="inline-flex items-center rounded-md bg-primary-800 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-800 disabled:bg-gray-300 disabled:cursor-not-allowed cursor-pointer"
           >
             Send Test Email
           </button>
@@ -503,7 +522,7 @@ const AppSettings: React.FC = () => {
               >
                 <form className="relative flex h-full flex-col divide-y divide-gray-200 bg-white shadow-xl">
                   <div className="h-0 flex-1 overflow-y-auto">
-                    <div className="bg-indigo-700 px-4 py-6 sm:px-6">
+                    <div className="bg-primary-700 px-4 py-6 sm:px-6">
                       <div className="flex items-center justify-between">
                         <DialogTitle className="text-base font-semibold text-white">
                           {isEditMode ? "Edit Email Sender" : "Add Email Sender"}
@@ -512,7 +531,7 @@ const AppSettings: React.FC = () => {
                           <button
                             type="button"
                             onClick={closeEmailDialog}
-                            className="relative rounded-md text-indigo-200 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white cursor-pointer"
+                            className="relative rounded-md text-primary-100 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white cursor-pointer"
                           >
                             <span className="absolute -inset-2.5" />
                             <span className="sr-only">Close panel</span>
@@ -551,7 +570,7 @@ const AppSettings: React.FC = () => {
                                 type="email"
                                 value={emailFormData.email}
                                 onChange={(e) => setEmailFormData({ ...emailFormData, email: e.target.value })}
-                                className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600 sm:text-sm/6"
+                                className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-800 sm:text-sm/6"
                                 placeholder="sender@example.com"
                               />
                             </div>
@@ -566,8 +585,10 @@ const AppSettings: React.FC = () => {
                                 id="provider"
                                 name="provider"
                                 value={emailFormData.emailProvider}
-                                onChange={(e) => setEmailFormData({ ...emailFormData, emailProvider: e.target.value as EmailProvider })}
-                                className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600 sm:text-sm/6"
+                                onChange={(e) =>
+                                  setEmailFormData({ ...emailFormData, emailProvider: e.target.value as EmailProvider })
+                                }
+                                className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-800 sm:text-sm/6"
                               >
                                 <option value="GMAIL">Gmail</option>
                                 <option value="OUTLOOK">Outlook</option>
@@ -586,7 +607,7 @@ const AppSettings: React.FC = () => {
                                 type="password"
                                 value={emailFormData.refreshToken}
                                 onChange={(e) => setEmailFormData({ ...emailFormData, refreshToken: e.target.value })}
-                                className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600 sm:text-sm/6"
+                                className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-800 sm:text-sm/6"
                                 placeholder="Enter OAuth2 refresh token"
                               />
                               <p className="mt-1 text-xs text-gray-500">
@@ -608,18 +629,18 @@ const AppSettings: React.FC = () => {
                                   value={aliasInput}
                                   onChange={(e) => setAliasInput(e.target.value)}
                                   onKeyPress={(e) => {
-                                    if (e.key === 'Enter') {
+                                    if (e.key === "Enter") {
                                       e.preventDefault();
                                       addAlias();
                                     }
                                   }}
-                                  className="flex-1 rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600 sm:text-sm/6"
+                                  className="flex-1 rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-800 sm:text-sm/6"
                                   placeholder="alias@example.com"
                                 />
                                 <button
                                   type="button"
                                   onClick={addAlias}
-                                  className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-500"
+                                  className="rounded-md bg-primary-800 px-3 py-1.5 text-sm font-semibold text-white hover:bg-primary-500 cursor-pointer"
                                 >
                                   Add
                                 </button>
@@ -665,7 +686,7 @@ const AppSettings: React.FC = () => {
                       <button
                         type="button"
                         onClick={handleSaveEmail}
-                        className="ml-4 inline-flex justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 cursor-pointer"
+                        className="ml-4 inline-flex justify-center rounded-md bg-primary-800 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-800 cursor-pointer"
                       >
                         {isEditMode ? "Save Changes" : "Create"}
                       </button>
@@ -690,14 +711,14 @@ const AppSettings: React.FC = () => {
               >
                 <form className="relative flex h-full flex-col divide-y divide-gray-200 bg-white shadow-xl">
                   <div className="h-0 flex-1 overflow-y-auto">
-                    <div className="bg-indigo-700 px-4 py-6 sm:px-6">
+                    <div className="bg-primary-700 px-4 py-6 sm:px-6">
                       <div className="flex items-center justify-between">
                         <DialogTitle className="text-base font-semibold text-white">Send Test Email</DialogTitle>
                         <div className="ml-3 flex h-7 items-center">
                           <button
                             type="button"
                             onClick={closeTestEmailDialog}
-                            className="relative rounded-md text-indigo-200 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white cursor-pointer"
+                            className="relative rounded-md text-primary-100 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white cursor-pointer"
                           >
                             <span className="absolute -inset-2.5" />
                             <span className="sr-only">Close panel</span>
@@ -738,7 +759,7 @@ const AppSettings: React.FC = () => {
                                   setTestEmailFormData({ ...testEmailFormData, fromEmail: e.target.value });
                                   setSelectedAlias(""); // Reset alias when email sender changes
                                 }}
-                                className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600 sm:text-sm/6"
+                                className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-800 sm:text-sm/6"
                               >
                                 {emails.map((email) => (
                                   <option key={email.id} value={email.email}>
@@ -750,9 +771,9 @@ const AppSettings: React.FC = () => {
                           </div>
 
                           {(() => {
-                            const selectedEmailSender = emails.find(e => e.email === testEmailFormData.fromEmail);
+                            const selectedEmailSender = emails.find((e) => e.email === testEmailFormData.fromEmail);
                             const hasAliases = selectedEmailSender?.aliases && selectedEmailSender.aliases.length > 0;
-                            
+
                             if (!hasAliases) {
                               return null;
                             }
@@ -768,7 +789,7 @@ const AppSettings: React.FC = () => {
                                     name="alias"
                                     value={selectedAlias}
                                     onChange={(e) => setSelectedAlias(e.target.value)}
-                                    className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600 sm:text-sm/6"
+                                    className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-800 sm:text-sm/6"
                                   >
                                     <option value="">{selectedEmailSender?.email} (Main Email)</option>
                                     {selectedEmailSender?.aliases?.map((alias, idx) => (
@@ -799,18 +820,18 @@ const AppSettings: React.FC = () => {
                                   value={toEmailInput}
                                   onChange={(e) => setToEmailInput(e.target.value)}
                                   onKeyPress={(e) => {
-                                    if (e.key === 'Enter') {
+                                    if (e.key === "Enter") {
                                       e.preventDefault();
                                       addToEmail();
                                     }
                                   }}
-                                  className="flex-1 rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600 sm:text-sm/6"
+                                  className="flex-1 rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-800 sm:text-sm/6"
                                   placeholder="recipient@example.com"
                                 />
                                 <button
                                   type="button"
                                   onClick={addToEmail}
-                                  className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-500"
+                                  className="rounded-md bg-primary-800 px-3 py-1.5 text-sm font-semibold text-white hover:bg-primary-500 cursor-pointer"
                                 >
                                   Add
                                 </button>
@@ -825,7 +846,12 @@ const AppSettings: React.FC = () => {
                                       {email}
                                       <button
                                         type="button"
-                                        onClick={() => setTestEmailFormData({ ...testEmailFormData, toEmails: testEmailFormData.toEmails.filter((_, i) => i !== idx) })}
+                                        onClick={() =>
+                                          setTestEmailFormData({
+                                            ...testEmailFormData,
+                                            toEmails: testEmailFormData.toEmails.filter((_, i) => i !== idx),
+                                          })
+                                        }
                                         className="text-gray-500 hover:text-gray-700"
                                       >
                                         ×
@@ -851,18 +877,18 @@ const AppSettings: React.FC = () => {
                                   value={ccEmailInput}
                                   onChange={(e) => setCcEmailInput(e.target.value)}
                                   onKeyPress={(e) => {
-                                    if (e.key === 'Enter') {
+                                    if (e.key === "Enter") {
                                       e.preventDefault();
                                       addCcEmail();
                                     }
                                   }}
-                                  className="flex-1 rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600 sm:text-sm/6"
+                                  className="flex-1 rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-800 sm:text-sm/6"
                                   placeholder="cc@example.com"
                                 />
                                 <button
                                   type="button"
                                   onClick={addCcEmail}
-                                  className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-500"
+                                  className="rounded-md bg-primary-800 px-3 py-1.5 text-sm font-semibold text-white hover:bg-primary-500 cursor-pointer"
                                 >
                                   Add
                                 </button>
@@ -877,7 +903,12 @@ const AppSettings: React.FC = () => {
                                       {email}
                                       <button
                                         type="button"
-                                        onClick={() => setTestEmailFormData({ ...testEmailFormData, ccEmails: testEmailFormData.ccEmails.filter((_, i) => i !== idx) })}
+                                        onClick={() =>
+                                          setTestEmailFormData({
+                                            ...testEmailFormData,
+                                            ccEmails: testEmailFormData.ccEmails.filter((_, i) => i !== idx),
+                                          })
+                                        }
                                         className="text-gray-500 hover:text-gray-700"
                                       >
                                         ×
@@ -903,18 +934,18 @@ const AppSettings: React.FC = () => {
                                   value={bccEmailInput}
                                   onChange={(e) => setBccEmailInput(e.target.value)}
                                   onKeyPress={(e) => {
-                                    if (e.key === 'Enter') {
+                                    if (e.key === "Enter") {
                                       e.preventDefault();
                                       addBccEmail();
                                     }
                                   }}
-                                  className="flex-1 rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600 sm:text-sm/6"
+                                  className="flex-1 rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-800 sm:text-sm/6"
                                   placeholder="bcc@example.com"
                                 />
                                 <button
                                   type="button"
                                   onClick={addBccEmail}
-                                  className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-500"
+                                  className="rounded-md bg-primary-800 px-3 py-1.5 text-sm font-semibold text-white hover:bg-primary-500 cursor-pointer"
                                 >
                                   Add
                                 </button>
@@ -929,7 +960,12 @@ const AppSettings: React.FC = () => {
                                       {email}
                                       <button
                                         type="button"
-                                        onClick={() => setTestEmailFormData({ ...testEmailFormData, bccEmails: testEmailFormData.bccEmails.filter((_, i) => i !== idx) })}
+                                        onClick={() =>
+                                          setTestEmailFormData({
+                                            ...testEmailFormData,
+                                            bccEmails: testEmailFormData.bccEmails.filter((_, i) => i !== idx),
+                                          })
+                                        }
                                         className="text-gray-500 hover:text-gray-700"
                                       >
                                         ×
@@ -951,8 +987,10 @@ const AppSettings: React.FC = () => {
                                 name="subject"
                                 type="text"
                                 value={testEmailFormData.subject}
-                                onChange={(e) => setTestEmailFormData({ ...testEmailFormData, subject: e.target.value })}
-                                className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600 sm:text-sm/6"
+                                onChange={(e) =>
+                                  setTestEmailFormData({ ...testEmailFormData, subject: e.target.value })
+                                }
+                                className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-800 sm:text-sm/6"
                                 placeholder="Email subject"
                               />
                             </div>
@@ -968,8 +1006,10 @@ const AppSettings: React.FC = () => {
                                 name="content"
                                 rows={6}
                                 value={testEmailFormData.content}
-                                onChange={(e) => setTestEmailFormData({ ...testEmailFormData, content: e.target.value })}
-                                className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600 sm:text-sm/6"
+                                onChange={(e) =>
+                                  setTestEmailFormData({ ...testEmailFormData, content: e.target.value })
+                                }
+                                className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-800 sm:text-sm/6"
                                 placeholder="Email message content"
                               />
                             </div>
@@ -987,7 +1027,7 @@ const AppSettings: React.FC = () => {
                                 multiple
                                 accept=".pdf,.csv,.xls,.xlsx"
                                 onChange={handleFileChange}
-                                className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600 sm:text-sm/6"
+                                className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-800 sm:text-sm/6"
                               />
                               {testEmailFormData.attachments.length > 0 && (
                                 <div className="mt-2 space-y-1">
@@ -1027,7 +1067,7 @@ const AppSettings: React.FC = () => {
                       type="button"
                       onClick={handleSendTestEmail}
                       disabled={sendingTestEmail}
-                      className="ml-4 inline-flex justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:bg-gray-400 disabled:cursor-not-allowed cursor-pointer"
+                      className="ml-4 inline-flex justify-center rounded-md bg-primary-800 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-800 disabled:bg-gray-400 disabled:cursor-not-allowed cursor-pointer"
                     >
                       {sendingTestEmail ? "Sending..." : "Send Email"}
                     </button>
