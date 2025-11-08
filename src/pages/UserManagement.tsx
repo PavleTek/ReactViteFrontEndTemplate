@@ -300,7 +300,7 @@ const UserManagement: React.FC = () => {
                         </div>
                       </div>
                       <div className="mt-1">
-                        <p className="text-sm text-primary-300">
+                        <p className="text-sm text-primary-100">
                           {isEditMode
                             ? "Edit user information below."
                             : "View and manage user information and settings."}
