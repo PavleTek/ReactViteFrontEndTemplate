@@ -26,7 +26,7 @@ export interface LoginResponse {
 export interface AuthContextType {
   user: User | null;
   token: string | null;
-  login: (credentials: LoginRequest) => Promise<void>;
+  login: (credentials: LoginRequest) => Promise<LoginResponse>;
   logout: () => void;
   updateUser: () => Promise<void>;
   isAuthenticated: boolean;
@@ -113,5 +113,50 @@ export interface SendTestEmailRequest {
   subject: string;
   content: string;
   attachments?: File[];
+}
+
+export interface Configuration {
+  id: number;
+  twoFactorEnabled: boolean;
+  appName: string;
+  updatedAt: string;
+}
+
+export interface TwoFactorSetupResponse {
+  message: string;
+  secret: string;
+  qrCode: string;
+}
+
+export interface TwoFactorVerifyRequest {
+  tempToken: string;
+  code: string;
+}
+
+export interface TwoFactorStatusResponse {
+  message: string;
+  enabled: boolean;
+  systemEnabled: boolean;
+}
+
+export interface TwoFactorVerifySetupRequest {
+  secret: string;
+  code: string;
+}
+
+export interface TwoFactorVerifySetupResponse {
+  message: string;
+  backupCodes: string[];
+  token?: string;
+  user?: User;
+}
+
+export interface LoginResponse {
+  message: string;
+  token?: string;
+  user?: User;
+  requiresTwoFactor?: boolean;
+  requiresTwoFactorSetup?: boolean;
+  tempToken?: string;
 }
 

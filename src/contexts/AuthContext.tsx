@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
-import type { AuthContextType, User, LoginRequest } from '../types';
+import type { AuthContextType, User, LoginRequest, LoginResponse } from '../types';
 import { authService } from '../services/authService';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -34,14 +34,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setIsLoading(false);
   }, []);
 
-  const login = async (credentials: LoginRequest) => {
+  const login = async (credentials: LoginRequest): Promise<LoginResponse> => {
     try {
       const response = await authService.login(credentials);
-      const { token: newToken, user: newUser } = response;
       
-      setToken(newToken);
-      setUser(newUser);
-      authService.setStoredAuth(newToken, newUser);
+      // If 2FA is required or setup is required, return the response without setting auth state
+      if (response.requiresTwoFactor || response.requiresTwoFactorSetup) {
+        return response;
+      }
+      
+      // Normal login - set auth state
+      const { token: newToken, user: newUser } = response;
+      if (newToken && newUser) {
+        setToken(newToken);
+        setUser(newUser);
+        authService.setStoredAuth(newToken, newUser);
+      }
+      
+      return response;
     } catch (error) {
       console.error('Login failed:', error);
       throw error;

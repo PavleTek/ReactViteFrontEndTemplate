@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { authService } from "../services/authService";
+import { twoFactorService } from "../services/twoFactorService";
 import type { UpdateUserRequest } from "../types";
 import SuccessBanner from "../components/SuccessBanner";
 import ErrorBanner from "../components/ErrorBanner";
+import TwoFactorSetup from "../components/TwoFactorSetup";
+import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from "@headlessui/react";
+import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 
 const Profile: React.FC = () => {
   const { user, updateUser } = useAuth();
@@ -11,6 +15,11 @@ const Profile: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [systemTwoFactorEnabled, setSystemTwoFactorEnabled] = useState(false);
+  const [showTwoFactorSetup, setShowTwoFactorSetup] = useState(false);
+  const [loading2FA, setLoading2FA] = useState(false);
+  const [showDisable2FADialog, setShowDisable2FADialog] = useState(false);
   const [formData, setFormData] = useState({
     username: "",
     email: "",
@@ -35,7 +44,40 @@ const Profile: React.FC = () => {
         confirmPassword: "",
       });
     }
+    loadTwoFactorStatus();
   }, [user]);
+
+  const loadTwoFactorStatus = async () => {
+    try {
+      const status = await twoFactorService.getTwoFactorStatus();
+      setTwoFactorEnabled(status.enabled);
+      setSystemTwoFactorEnabled(status.systemEnabled);
+    } catch (err) {
+      console.error('Failed to load 2FA status:', err);
+    }
+  };
+
+  const handleDisableTwoFactor = async () => {
+    try {
+      setLoading2FA(true);
+      setError(null);
+      await twoFactorService.disableTwoFactor();
+      setTwoFactorEnabled(false);
+      setSuccess('2FA disabled successfully');
+      setShowDisable2FADialog(false);
+      await loadTwoFactorStatus();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to disable 2FA');
+    } finally {
+      setLoading2FA(false);
+    }
+  };
+
+  const handleTwoFactorSetupComplete = async () => {
+    setShowTwoFactorSetup(false);
+    await loadTwoFactorStatus();
+    setSuccess('2FA enabled successfully');
+  };
 
   const getInitials = (name?: string, lastName?: string): string => {
     const firstInitial = name?.charAt(0)?.toUpperCase() || "";
@@ -329,8 +371,111 @@ const Profile: React.FC = () => {
               </div>
             </div>
           )}
+
+          {/* Two-Factor Authentication Section */}
+          <div className="bg-white px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-3 border-t border-gray-100">
+            <dt className="text-sm/6 font-medium text-gray-900">Two-Factor Authentication</dt>
+            <dd className="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+              {showTwoFactorSetup ? (
+                <TwoFactorSetup
+                  onComplete={handleTwoFactorSetupComplete}
+                  onCancel={() => setShowTwoFactorSetup(false)}
+                />
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">
+                        {twoFactorEnabled ? 'Enabled' : 'Disabled'}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {systemTwoFactorEnabled
+                          ? twoFactorEnabled
+                            ? 'Your account is protected with 2FA'
+                            : '2FA is required. Please set it up.'
+                          : '2FA is optional. Enable it for extra security.'}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      {twoFactorEnabled ? (
+                        <button
+                          type="button"
+                          onClick={() => setShowDisable2FADialog(true)}
+                          disabled={loading2FA}
+                          className="rounded-md bg-white px-3 py-1.5 text-sm font-semibold text-gray-900 shadow-xs border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {loading2FA ? 'Disabling...' : 'Disable'}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setShowTwoFactorSetup(true)}
+                          className="rounded-md bg-primary-600 px-3 py-1.5 text-sm font-semibold text-white shadow-xs hover:bg-primary-500"
+                        >
+                          Enable
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </dd>
+          </div>
         </dl>
       </div>
+
+      {/* Disable 2FA Confirmation Dialog */}
+      <Dialog open={showDisable2FADialog} onClose={setShowDisable2FADialog} className="relative z-50">
+        <DialogBackdrop
+          transition
+          className="fixed inset-0 bg-gray-500/75 transition-opacity data-closed:opacity-0 data-enter:duration-300 data-enter:ease-out data-leave:duration-200 data-leave:ease-in"
+        />
+        <div className="fixed inset-0 z-10 w-screen overflow-y-auto">
+          <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+            <DialogPanel
+              transition
+              className="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all data-closed:translate-y-4 data-closed:opacity-0 data-enter:duration-300 data-enter:ease-out data-leave:duration-200 data-leave:ease-in sm:my-8 sm:w-full sm:max-w-lg data-closed:sm:translate-y-0 data-closed:sm:scale-95"
+            >
+              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="sm:flex sm:items-start">
+                  <div className="mx-auto flex size-12 shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:size-10">
+                    <ExclamationTriangleIcon aria-hidden="true" className="size-6 text-red-600" />
+                  </div>
+                  <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                    <DialogTitle as="h3" className="text-base font-semibold text-gray-900">
+                      Disable Two-Factor Authentication
+                    </DialogTitle>
+                    <div className="mt-2">
+                      <p className="text-sm text-gray-500">
+                        Are you sure you want to disable two-factor authentication? This will make your account less secure. You can re-enable it at any time from your profile settings.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
+                <button
+                  type="button"
+                  onClick={handleDisableTwoFactor}
+                  disabled={loading2FA}
+                  className="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-red-500 sm:ml-3 sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading2FA ? 'Disabling...' : 'Disable 2FA'}
+                </button>
+                <button
+                  type="button"
+                  data-autofocus
+                  onClick={() => setShowDisable2FADialog(false)}
+                  disabled={loading2FA}
+                  className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Cancel
+                </button>
+              </div>
+            </DialogPanel>
+          </div>
+        </div>
+      </Dialog>
     </div>
   );
 };

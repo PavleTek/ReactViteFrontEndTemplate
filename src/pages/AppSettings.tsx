@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { XMarkIcon, TrashIcon, PencilIcon, ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { Dialog, DialogPanel, DialogTitle, DialogBackdrop } from "@headlessui/react";
 import { emailService } from "../services/emailService";
+import { configService } from "../services/configService";
 import type {
   EmailSender,
   EmailProvider,
@@ -17,6 +18,9 @@ const AppSettings: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [appName, setAppName] = useState('Application');
+  const [loadingConfig, setLoadingConfig] = useState(false);
 
   // Email management dialog state
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
@@ -53,7 +57,59 @@ const AppSettings: React.FC = () => {
 
   useEffect(() => {
     loadEmails();
+    loadConfig();
   }, []);
+
+  const loadConfig = async () => {
+    try {
+      const { config } = await configService.getConfig();
+      setTwoFactorEnabled(config.twoFactorEnabled);
+      setAppName(config.appName || 'Application');
+    } catch (err: any) {
+      console.error('Failed to load config:', err);
+    }
+  };
+
+  const handleToggleTwoFactor = async (enabled: boolean) => {
+    try {
+      setLoadingConfig(true);
+      setError(null);
+      
+      // Check if trying to enable without email senders
+      if (enabled && emails.length === 0) {
+        setError('Cannot enable 2FA. At least one email sender must be configured.');
+        setLoadingConfig(false);
+        return;
+      }
+
+      const { config } = await configService.updateConfig({ twoFactorEnabled: enabled });
+      setTwoFactorEnabled(config.twoFactorEnabled);
+      setSuccess(enabled ? '2FA enabled successfully' : '2FA disabled successfully');
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to update 2FA setting');
+    } finally {
+      setLoadingConfig(false);
+    }
+  };
+
+  const handleUpdateAppName = async () => {
+    if (!appName.trim()) {
+      setError('App name cannot be empty');
+      return;
+    }
+
+    try {
+      setLoadingConfig(true);
+      setError(null);
+      const { config } = await configService.updateConfig({ appName: appName.trim() });
+      setAppName(config.appName);
+      setSuccess('App name updated successfully');
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to update app name');
+    } finally {
+      setLoadingConfig(false);
+    }
+  };
 
   const loadEmails = async () => {
     try {
@@ -442,6 +498,78 @@ const AppSettings: React.FC = () => {
           <SuccessBanner message={success} onDismiss={() => setSuccess(null)} />
         </div>
       )}
+
+      {/* App Name Section */}
+      <div className="mb-8">
+        <div className="bg-white shadow-xs rounded-xl p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Application Name</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Set the application name that will appear in authenticator apps when users set up 2FA.
+          </p>
+          <div className="flex gap-3 items-end">
+            <div className="flex-1">
+              <label htmlFor="appName" className="block text-sm font-medium text-gray-700 mb-2">
+                App Name
+              </label>
+              <input
+                id="appName"
+                type="text"
+                value={appName}
+                onChange={(e) => setAppName(e.target.value)}
+                maxLength={100}
+                className="block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-primary-600"
+                placeholder="Application"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={handleUpdateAppName}
+              disabled={loadingConfig || !appName.trim()}
+              className="rounded-md bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loadingConfig ? 'Saving...' : 'Save'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Two-Factor Authentication Section */}
+      <div className="mb-8">
+        <div className="bg-white shadow-xs rounded-xl p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">Two-Factor Authentication</h2>
+              <p className="text-sm text-gray-600 mb-1">
+                Enable system-wide two-factor authentication for all users.
+              </p>
+              <p className="text-xs text-gray-500">
+                {emails.length === 0 
+                  ? '⚠️ At least one email sender must be configured before enabling 2FA.'
+                  : `✓ ${emails.length} email sender${emails.length !== 1 ? 's' : ''} configured.`}
+              </p>
+            </div>
+            <div className="ml-4">
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={twoFactorEnabled}
+                  onChange={(e) => handleToggleTwoFactor(e.target.checked)}
+                  disabled={loadingConfig || (emails.length === 0 && !twoFactorEnabled)}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed"></div>
+              </label>
+            </div>
+          </div>
+          {twoFactorEnabled && (
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+              <p className="text-sm text-blue-800">
+                <strong>2FA is enabled.</strong> Users with 2FA set up will be required to enter a code from their authenticator app when logging in.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Email Senders Section */}
       <div className="mb-8">
