@@ -7,7 +7,7 @@ export const configService = {
     return { config: response.data.config };
   },
 
-  async updateConfig(data: { twoFactorEnabled?: boolean; appName?: string }): Promise<{ config: Configuration }> {
+  async updateConfig(data: { twoFactorEnabled?: boolean; appName?: string; recoveryEmailSenderId?: number | null }): Promise<{ config: Configuration }> {
     const response = await api.put<ApiResponse & { config: Configuration }>('/admin/config', data);
     return { config: response.data.config };
   }

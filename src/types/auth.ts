@@ -119,6 +119,12 @@ export interface Configuration {
   id: number;
   twoFactorEnabled: boolean;
   appName: string;
+  recoveryEmailSenderId?: number | null;
+  recoveryEmailSender?: {
+    id: number;
+    email: string;
+    aliases: string[];
+  } | null;
   updatedAt: string;
 }
 
@@ -158,5 +164,42 @@ export interface LoginResponse {
   requiresTwoFactor?: boolean;
   requiresTwoFactorSetup?: boolean;
   tempToken?: string;
+}
+
+export interface RecoveryCodeRequest {
+  tempToken: string;
+}
+
+export interface RecoveryCodeResponse {
+  message: string;
+}
+
+export interface VerifyRecoveryCodeRequest {
+  tempToken: string;
+  code: string;
+}
+
+export interface VerifyRecoveryCodeResponse {
+  message: string;
+  token: string;
+  user: User;
+}
+
+export interface PasswordResetRequest {
+  username: string;
+}
+
+export interface PasswordResetRequestResponse {
+  message: string;
+}
+
+export interface PasswordResetVerifyRequest {
+  username: string;
+  code: string;
+  newPassword: string;
+}
+
+export interface PasswordResetVerifyResponse {
+  message: string;
 }
 

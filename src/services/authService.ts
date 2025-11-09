@@ -1,5 +1,5 @@
 import api from './api';
-import type { LoginRequest, LoginResponse, User, UpdateUserRequest, ApiResponse } from '../types';
+import type { LoginRequest, LoginResponse, User, UpdateUserRequest, ApiResponse, PasswordResetRequest, PasswordResetRequestResponse, PasswordResetVerifyRequest, PasswordResetVerifyResponse } from '../types';
 
 export const authService = {
   async login(credentials: LoginRequest): Promise<LoginResponse> {
@@ -38,5 +38,19 @@ export const authService = {
   setStoredAuth(token: string, user: User) {
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(user));
+  },
+
+  async requestPasswordReset(data: PasswordResetRequest): Promise<PasswordResetRequestResponse> {
+    const response = await api.post<ApiResponse & PasswordResetRequestResponse>('/auth/password-reset/request', data);
+    return {
+      message: response.data.message
+    };
+  },
+
+  async verifyPasswordReset(data: PasswordResetVerifyRequest): Promise<PasswordResetVerifyResponse> {
+    const response = await api.post<ApiResponse & PasswordResetVerifyResponse>('/auth/password-reset/verify', data);
+    return {
+      message: response.data.message
+    };
   }
 };

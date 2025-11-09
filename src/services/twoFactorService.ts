@@ -6,7 +6,11 @@ import type {
   TwoFactorVerifySetupRequest,
   TwoFactorVerifySetupResponse,
   LoginResponse,
-  ApiResponse
+  ApiResponse,
+  RecoveryCodeRequest,
+  RecoveryCodeResponse,
+  VerifyRecoveryCodeRequest,
+  VerifyRecoveryCodeResponse
 } from '../types';
 
 export const twoFactorService = {
@@ -64,6 +68,22 @@ export const twoFactorService = {
       message: response.data.message,
       enabled: response.data.enabled,
       systemEnabled: response.data.systemEnabled
+    };
+  },
+
+  async requestRecoveryCode(data: RecoveryCodeRequest): Promise<RecoveryCodeResponse> {
+    const response = await api.post<ApiResponse & RecoveryCodeResponse>('/auth/2fa/recovery/request', data);
+    return {
+      message: response.data.message
+    };
+  },
+
+  async verifyRecoveryCode(data: VerifyRecoveryCodeRequest): Promise<VerifyRecoveryCodeResponse> {
+    const response = await api.post<ApiResponse & VerifyRecoveryCodeResponse>('/auth/2fa/recovery/verify', data);
+    return {
+      message: response.data.message,
+      token: response.data.token,
+      user: response.data.user
     };
   }
 };

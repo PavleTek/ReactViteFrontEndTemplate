@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { twoFactorService } from '../services/twoFactorService';
+import { authService } from '../services/authService';
 import TwoFactorSetup from './TwoFactorSetup';
 
 const Login: React.FC = () => {
@@ -15,6 +16,15 @@ const Login: React.FC = () => {
   const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
   const [requiresTwoFactorSetup, setRequiresTwoFactorSetup] = useState(false);
   const [justReturnedFrom2FA, setJustReturnedFrom2FA] = useState(false);
+  const [showRecovery, setShowRecovery] = useState(false);
+  const [recoveryCode, setRecoveryCode] = useState('');
+  const [recoveryCodeSent, setRecoveryCodeSent] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotPasswordStep, setForgotPasswordStep] = useState<'request' | 'verify'>('request');
+  const [resetCode, setResetCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [resetCodeSent, setResetCodeSent] = useState(false);
   
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -123,6 +133,131 @@ const Login: React.FC = () => {
     }
   };
 
+  const handleRequestRecoveryCode = async () => {
+    if (!tempToken) {
+      setError('Session expired. Please login again.');
+      return;
+    }
+
+    setError('');
+    setIsLoading(true);
+
+    try {
+      await twoFactorService.requestRecoveryCode({ tempToken });
+      setRecoveryCodeSent(true);
+      setSuccess('Recovery code sent to your email address');
+      setIsLoading(false);
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to send recovery code. Please try again.');
+      setIsLoading(false);
+    }
+  };
+
+  const handleVerifyRecoveryCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
+
+    if (!tempToken) {
+      setError('Session expired. Please login again.');
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const response = await twoFactorService.verifyRecoveryCode({
+        tempToken,
+        code: recoveryCode
+      });
+
+      if (response.token && response.user) {
+        // Store auth data and update context
+        localStorage.setItem('token', response.token);
+        localStorage.setItem('user', JSON.stringify(response.user));
+        
+        // Reload from localStorage to update context
+        window.location.reload();
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Invalid recovery code. Please try again.');
+      setIsLoading(false);
+      setRecoveryCode('');
+    }
+  };
+
+  const handleRequestPasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
+
+    if (!username.trim()) {
+      setError('Please enter your username or email');
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      await authService.requestPasswordReset({ username: username.trim() });
+      setResetCodeSent(true);
+      setForgotPasswordStep('verify');
+      setSuccess('If an account with that username or email exists, a password reset code has been sent.');
+      setIsLoading(false);
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to send password reset code. Please try again.');
+      setIsLoading(false);
+    }
+  };
+
+  const handleVerifyPasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (!resetCode || resetCode.length !== 6) {
+      setError('Please enter a valid 6-digit code');
+      return;
+    }
+
+    if (!newPassword) {
+      setError('Password is required');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      await authService.verifyPasswordReset({
+        username: username.trim(),
+        code: resetCode,
+        newPassword: newPassword
+      });
+
+      setSuccess('Password has been reset successfully. You can now login with your new password.');
+      setIsLoading(false);
+      
+      // Reset form and return to login
+      setTimeout(() => {
+        setShowForgotPassword(false);
+        setForgotPasswordStep('request');
+        setResetCode('');
+        setNewPassword('');
+        setConfirmPassword('');
+        setResetCodeSent(false);
+        setUsername('');
+        setError('');
+        setSuccess('');
+      }, 2000);
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to reset password. Please try again.');
+      setIsLoading(false);
+      setResetCode('');
+    }
+  };
+
   // Show mandatory 2FA setup screen
   if (requiresTwoFactorSetup) {
     return (
@@ -150,6 +285,125 @@ const Login: React.FC = () => {
   }
 
   if (requiresTwoFactor) {
+    // Show recovery code entry if recovery was requested
+    if (showRecovery) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-md w-full space-y-8">
+            <div>
+              <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                Recovery Code
+              </h2>
+              <p className="mt-2 text-center text-sm text-gray-600">
+                {recoveryCodeSent 
+                  ? 'Enter the 6-digit recovery code sent to your email'
+                  : 'Request a recovery code to reset your 2FA'}
+              </p>
+            </div>
+            {!recoveryCodeSent ? (
+              <div className="mt-8 space-y-6">
+                {error && (
+                  <div className="text-red-600 text-sm text-center">
+                    {error}
+                  </div>
+                )}
+                {success && (
+                  <div className="text-green-600 text-sm text-center">
+                    {success}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={handleRequestRecoveryCode}
+                  disabled={isLoading}
+                  className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? 'Sending...' : 'Send Recovery Code'}
+                </button>
+                <div className="text-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowRecovery(false);
+                      setError('');
+                      setSuccess('');
+                      setRecoveryCodeSent(false);
+                    }}
+                    className="text-sm text-indigo-600 hover:text-indigo-500"
+                  >
+                    Back to 2FA
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <form className="mt-8 space-y-6" onSubmit={handleVerifyRecoveryCode}>
+                <div>
+                  <label htmlFor="recoveryCode" className="sr-only">
+                    Recovery Code
+                  </label>
+                  <input
+                    id="recoveryCode"
+                    name="recoveryCode"
+                    type="text"
+                    required
+                    maxLength={6}
+                    pattern="[0-9]{6}"
+                    className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm text-center text-2xl tracking-widest"
+                    placeholder="000000"
+                    value={recoveryCode}
+                    onChange={(e) => setRecoveryCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    autoFocus
+                  />
+                </div>
+
+                {error && (
+                  <div className="text-red-600 text-sm text-center">
+                    {error}
+                  </div>
+                )}
+
+                <div>
+                  <button
+                    type="submit"
+                    disabled={isLoading || recoveryCode.length !== 6}
+                    className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isLoading ? 'Verifying...' : 'Verify Recovery Code'}
+                  </button>
+                </div>
+                <div className="text-center space-y-2">
+                  <button
+                    type="button"
+                    onClick={handleRequestRecoveryCode}
+                    disabled={isLoading}
+                    className="text-sm text-indigo-600 hover:text-indigo-500 disabled:opacity-50"
+                  >
+                    Resend code
+                  </button>
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowRecovery(false);
+                        setRecoveryCodeSent(false);
+                        setRecoveryCode('');
+                        setError('');
+                        setSuccess('');
+                      }}
+                      className="text-sm text-indigo-600 hover:text-indigo-500"
+                    >
+                      Back to 2FA
+                    </button>
+                  </div>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Show normal 2FA code entry
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8">
@@ -196,20 +450,222 @@ const Login: React.FC = () => {
                 {isLoading ? 'Verifying...' : 'Verify'}
               </button>
             </div>
-            <div className="text-center">
+            <div className="text-center space-y-2">
               <button
                 type="button"
-                onClick={() => {
-                  setRequiresTwoFactor(false);
-                  setTempToken(null);
-                  setTwoFactorCode('');
-                  setError('');
-                  setJustReturnedFrom2FA(true);
-                }}
+                onClick={() => setShowRecovery(true)}
                 className="text-sm text-indigo-600 hover:text-indigo-500"
               >
-                Back to login
+                Lost access to your authenticator?
               </button>
+              <div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRequiresTwoFactor(false);
+                    setTempToken(null);
+                    setTwoFactorCode('');
+                    setError('');
+                    setJustReturnedFrom2FA(true);
+                  }}
+                  className="text-sm text-indigo-600 hover:text-indigo-500"
+                >
+                  Back to login
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // Show forgot password flow
+  if (showForgotPassword) {
+    if (forgotPasswordStep === 'request') {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-md w-full space-y-8">
+            <div>
+              <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                Reset Password
+              </h2>
+              <p className="mt-2 text-center text-sm text-gray-600">
+                Enter your username or email to receive a password reset code
+              </p>
+            </div>
+            <form className="mt-8 space-y-6" onSubmit={handleRequestPasswordReset}>
+              <div>
+                <label htmlFor="reset-username" className="sr-only">
+                  Username or Email
+                </label>
+                <input
+                  id="reset-username"
+                  name="reset-username"
+                  type="text"
+                  required
+                  className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                  placeholder="Username or Email"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  autoFocus
+                />
+              </div>
+
+              {error && (
+                <div className="text-red-600 text-sm text-center">
+                  {error}
+                </div>
+              )}
+              {success && (
+                <div className="text-green-600 text-sm text-center">
+                  {success}
+                </div>
+              )}
+
+              <div>
+                <button
+                  type="submit"
+                  disabled={isLoading || !username.trim()}
+                  className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? 'Sending...' : 'Send Reset Code'}
+                </button>
+              </div>
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowForgotPassword(false);
+                    setUsername('');
+                    setError('');
+                    setSuccess('');
+                  }}
+                  className="text-sm text-indigo-600 hover:text-indigo-500"
+                >
+                  Back to login
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      );
+    }
+
+    // Verify & Reset step
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-8">
+          <div>
+            <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+              Reset Password
+            </h2>
+            <p className="mt-2 text-center text-sm text-gray-600">
+              Enter the code sent to your email and your new password
+            </p>
+          </div>
+          <form className="mt-8 space-y-6" onSubmit={handleVerifyPasswordReset}>
+            <div>
+              <label htmlFor="reset-code" className="sr-only">
+                Reset Code
+              </label>
+              <input
+                id="reset-code"
+                name="reset-code"
+                type="text"
+                required
+                maxLength={6}
+                pattern="[0-9]{6}"
+                className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm text-center text-2xl tracking-widest"
+                placeholder="000000"
+                value={resetCode}
+                onChange={(e) => setResetCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                autoFocus
+              />
+            </div>
+
+            <div>
+              <label htmlFor="new-password" className="sr-only">
+                New Password
+              </label>
+              <input
+                id="new-password"
+                name="new-password"
+                type="password"
+                required
+                className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                placeholder="New Password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="confirm-password" className="sr-only">
+                Confirm Password
+              </label>
+              <input
+                id="confirm-password"
+                name="confirm-password"
+                type="password"
+                required
+                className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                placeholder="Confirm Password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+              />
+            </div>
+
+            {error && (
+              <div className="text-red-600 text-sm text-center">
+                {error}
+              </div>
+            )}
+            {success && (
+              <div className="text-green-600 text-sm text-center">
+                {success}
+              </div>
+            )}
+
+            <div>
+              <button
+                type="submit"
+                disabled={isLoading || resetCode.length !== 6 || !newPassword || newPassword !== confirmPassword}
+                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? 'Resetting...' : 'Reset Password'}
+              </button>
+            </div>
+            <div className="text-center space-y-2">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleRequestPasswordReset(e);
+                }}
+                disabled={isLoading}
+                className="text-sm text-indigo-600 hover:text-indigo-500 disabled:opacity-50"
+              >
+                Resend code
+              </button>
+              <div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowForgotPassword(false);
+                    setForgotPasswordStep('request');
+                    setResetCode('');
+                    setNewPassword('');
+                    setConfirmPassword('');
+                    setResetCodeSent(false);
+                    setError('');
+                    setSuccess('');
+                  }}
+                  className="text-sm text-indigo-600 hover:text-indigo-500"
+                >
+                  Back to login
+                </button>
+              </div>
             </div>
           </form>
         </div>
@@ -277,6 +733,19 @@ const Login: React.FC = () => {
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? 'Signing in...' : 'Sign in'}
+            </button>
+          </div>
+          <div className="text-center">
+            <button
+              type="button"
+              onClick={() => {
+                setShowForgotPassword(true);
+                setError('');
+                setSuccess('');
+              }}
+              className="text-sm text-indigo-600 hover:text-indigo-500"
+            >
+              Forgot password?
             </button>
           </div>
         </form>

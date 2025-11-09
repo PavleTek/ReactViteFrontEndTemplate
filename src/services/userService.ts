@@ -34,5 +34,9 @@ export const userService = {
     const response = await api.put<ApiResponse & { user: User }>(`/admin/users/${id}/roles`, { roleIds });
     return { user: response.data.user };
   },
+
+  async forceResetUser2FA(id: number): Promise<void> {
+    await api.post<ApiResponse>(`/admin/users/${id}/reset-2fa`);
+  },
 };
 

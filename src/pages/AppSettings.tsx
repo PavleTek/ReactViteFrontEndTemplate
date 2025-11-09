@@ -20,6 +20,7 @@ const AppSettings: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [appName, setAppName] = useState('Application');
+  const [recoveryEmailSenderId, setRecoveryEmailSenderId] = useState<number | null>(null);
   const [loadingConfig, setLoadingConfig] = useState(false);
 
   // Email management dialog state
@@ -65,6 +66,7 @@ const AppSettings: React.FC = () => {
       const { config } = await configService.getConfig();
       setTwoFactorEnabled(config.twoFactorEnabled);
       setAppName(config.appName || 'Application');
+      setRecoveryEmailSenderId(config.recoveryEmailSenderId || null);
     } catch (err: any) {
       console.error('Failed to load config:', err);
     }
@@ -106,6 +108,20 @@ const AppSettings: React.FC = () => {
       setSuccess('App name updated successfully');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to update app name');
+    } finally {
+      setLoadingConfig(false);
+    }
+  };
+
+  const handleUpdateRecoveryEmail = async (emailSenderId: number | null) => {
+    try {
+      setLoadingConfig(true);
+      setError(null);
+      const { config } = await configService.updateConfig({ recoveryEmailSenderId: emailSenderId });
+      setRecoveryEmailSenderId(config.recoveryEmailSenderId || null);
+      setSuccess('Recovery email updated successfully');
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to update recovery email');
     } finally {
       setLoadingConfig(false);
     }
@@ -571,6 +587,48 @@ const AppSettings: React.FC = () => {
         </div>
       </div>
 
+      {/* Recovery Email Section */}
+      {emails.length > 0 && (
+        <div className="mb-8">
+          <div className="bg-white shadow-xs rounded-xl p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">2FA Recovery Email</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Select the default email address that will be used to send 2FA recovery codes to users who have lost access to their authenticator app.
+            </p>
+            <div className="flex gap-3 items-end">
+              <div className="flex-1">
+                <label htmlFor="recoveryEmail" className="block text-sm font-medium text-gray-700 mb-2">
+                  Recovery Email Sender
+                </label>
+                <select
+                  id="recoveryEmail"
+                  value={recoveryEmailSenderId || ''}
+                  onChange={(e) => {
+                    const newValue = e.target.value === '' ? null : parseInt(e.target.value);
+                    setRecoveryEmailSenderId(newValue);
+                    handleUpdateRecoveryEmail(newValue);
+                  }}
+                  disabled={loadingConfig}
+                  className="block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-primary-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <option value="">Select an email sender...</option>
+                  {emails.map((email) => (
+                    <option key={email.id} value={email.id}>
+                      {email.email} {email.aliases && email.aliases.length > 0 && `(${email.aliases.length} alias${email.aliases.length !== 1 ? 'es' : ''})`}
+                    </option>
+                  ))}
+                </select>
+                {recoveryEmailSenderId && (
+                  <p className="mt-2 text-xs text-gray-500">
+                    Recovery codes will be sent from: {emails.find(e => e.id === recoveryEmailSenderId)?.email}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Email Senders Section */}
       <div className="mb-8">
         <div className="flex justify-between items-center mb-4">
@@ -752,7 +810,6 @@ const AppSettings: React.FC = () => {
                               <input
                                 id="refreshToken"
                                 name="refreshToken"
-                                type="password"
                                 value={emailFormData.refreshToken}
                                 onChange={(e) => setEmailFormData({ ...emailFormData, refreshToken: e.target.value })}
                                 className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-800 sm:text-sm/6"
