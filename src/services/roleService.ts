@@ -1,5 +1,5 @@
 import api from './api';
-import type { Role, CreateRoleRequest, UpdateRoleRequest, ApiResponse } from '../types';
+import type { Role, ApiResponse } from '../types';
 
 export const roleService = {
   async getAllRoles(): Promise<{ roles: Role[] }> {

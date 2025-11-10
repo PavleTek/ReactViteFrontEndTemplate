@@ -24,7 +24,6 @@ const Login: React.FC = () => {
   const [resetCode, setResetCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [resetCodeSent, setResetCodeSent] = useState(false);
   
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -198,7 +197,6 @@ const Login: React.FC = () => {
 
     try {
       await authService.requestPasswordReset({ username: username.trim() });
-      setResetCodeSent(true);
       setForgotPasswordStep('verify');
       setSuccess('If an account with that username or email exists, a password reset code has been sent.');
       setIsLoading(false);
@@ -246,7 +244,6 @@ const Login: React.FC = () => {
         setResetCode('');
         setNewPassword('');
         setConfirmPassword('');
-        setResetCodeSent(false);
         setUsername('');
         setError('');
         setSuccess('');
@@ -657,7 +654,6 @@ const Login: React.FC = () => {
                     setResetCode('');
                     setNewPassword('');
                     setConfirmPassword('');
-                    setResetCodeSent(false);
                     setError('');
                     setSuccess('');
                   }}

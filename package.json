@@ -1,13 +1,13 @@
 {
-  "name": "frontend-template",
+  "name": "pavletek-front-template",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview --port 8080",
+    "start": "vite preview --port 8080"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.9",

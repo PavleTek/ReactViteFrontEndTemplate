@@ -17,11 +17,6 @@ export interface LoginRequest {
   password: string;
 }
 
-export interface LoginResponse {
-  message: string;
-  token: string;
-  user: User;
-}
 
 export interface AuthContextType {
   user: User | null;
@@ -75,7 +70,7 @@ export interface UpdateRoleRequest {
   name: string;
 }
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse {
   message: string;
   [key: string]: any;
 }

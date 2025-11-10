@@ -1,5 +1,5 @@
 import api from './api';
-import type { User, CreateUserRequest, UpdateUserRequest, ChangePasswordRequest, ChangeUserRolesRequest, ApiResponse } from '../types';
+import type { User, CreateUserRequest, UpdateUserRequest, ApiResponse } from '../types';
 
 export const userService = {
   async getAllUsers(): Promise<{ users: User[] }> {
