@@ -2,13 +2,15 @@ import React, { useState, useEffect } from "react";
 import { XMarkIcon, TrashIcon, PencilIcon, ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { Dialog, DialogPanel, DialogTitle, DialogBackdrop } from "@headlessui/react";
 import { emailService } from "../services/emailService";
+import { domainService } from "../services/domainService";
 import { configService } from "../services/configService";
-import type { EmailSender, CreateEmailRequest, UpdateEmailRequest, SendTestEmailRequest } from "../types";
+import type { EmailSender, Domain, CreateEmailRequest, UpdateEmailRequest, SendTestEmailRequest, CreateDomainRequest } from "../types";
 import SuccessBanner from "../components/SuccessBanner";
 import ErrorBanner from "../components/ErrorBanner";
 
 const AppSettings: React.FC = () => {
   const [emails, setEmails] = useState<EmailSender[]>([]);
+  const [domains, setDomains] = useState<Domain[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -24,6 +26,9 @@ const AppSettings: React.FC = () => {
   const [emailFormData, setEmailFormData] = useState({
     email: "",
   });
+  const [emailName, setEmailName] = useState("");
+  const [selectedDomainId, setSelectedDomainId] = useState<number | null>(null);
+  const [useDirectEmail, setUseDirectEmail] = useState(false);
 
   // Test email dialog state
   const [testEmailDialogOpen, setTestEmailDialogOpen] = useState(false);
@@ -45,8 +50,17 @@ const AppSettings: React.FC = () => {
   const [deleteEmailDialogOpen, setDeleteEmailDialogOpen] = useState(false);
   const [emailToDelete, setEmailToDelete] = useState<EmailSender | null>(null);
 
+  // Domain management dialog state
+  const [domainDialogOpen, setDomainDialogOpen] = useState(false);
+  const [domainFormData, setDomainFormData] = useState({
+    domain: "",
+  });
+  const [deleteDomainDialogOpen, setDeleteDomainDialogOpen] = useState(false);
+  const [domainToDelete, setDomainToDelete] = useState<Domain | null>(null);
+
   useEffect(() => {
     loadEmails();
+    loadDomains();
     loadConfig();
   }, []);
 
@@ -129,10 +143,22 @@ const AppSettings: React.FC = () => {
     }
   };
 
+  const loadDomains = async () => {
+    try {
+      const data = await domainService.getAllDomains();
+      setDomains(data.domains);
+    } catch (err: any) {
+      console.error("Failed to load domains:", err);
+    }
+  };
+
   const openAddEmailDialog = () => {
     setSelectedEmail(null);
     setIsEditMode(false);
     setEmailFormData({ email: "" });
+    setEmailName("");
+    setSelectedDomainId(domains.length > 0 ? domains[0].id : null);
+    setUseDirectEmail(false);
     setEmailDialogOpen(true);
     setError(null);
     setSuccess(null);
@@ -154,6 +180,9 @@ const AppSettings: React.FC = () => {
     setSelectedEmail(null);
     setIsEditMode(false);
     setEmailFormData({ email: "" });
+    setEmailName("");
+    setSelectedDomainId(null);
+    setUseDirectEmail(false);
     setError(null);
     setSuccess(null);
   };
@@ -162,20 +191,40 @@ const AppSettings: React.FC = () => {
     try {
       setError(null);
 
-      if (!emailFormData.email) {
+      let finalEmail = "";
+      if (useDirectEmail || emailFormData.email.includes("@")) {
+        finalEmail = emailFormData.email.trim();
+      } else {
+        if (!emailName.trim()) {
+          setError("Email name is required");
+          return;
+        }
+        if (!selectedDomainId) {
+          setError("Domain is required");
+          return;
+        }
+        const selectedDomain = domains.find(d => d.id === selectedDomainId);
+        if (!selectedDomain) {
+          setError("Selected domain not found");
+          return;
+        }
+        finalEmail = `${emailName.trim()}@${selectedDomain.domain}`;
+      }
+
+      if (!finalEmail) {
         setError("Email is required");
         return;
       }
 
       if (isEditMode && selectedEmail) {
         const updateData: UpdateEmailRequest = {
-          email: emailFormData.email,
+          email: finalEmail,
         };
         await emailService.updateEmail(selectedEmail.id, updateData);
         setSuccess("Email sender updated successfully");
       } else {
         const createData: CreateEmailRequest = {
-          email: emailFormData.email,
+          email: finalEmail,
         };
         await emailService.createEmail(createData);
         setSuccess("Email sender created successfully");
@@ -188,6 +237,21 @@ const AppSettings: React.FC = () => {
     } catch (err: any) {
       setError(err.response?.data?.error || "Failed to save email sender");
     }
+  };
+
+  // Calculate email preview
+  const getEmailPreview = (): string => {
+    if (useDirectEmail || emailFormData.email.includes("@")) {
+      return emailFormData.email;
+    }
+    if (!emailName.trim() || !selectedDomainId) {
+      return "";
+    }
+    const selectedDomain = domains.find(d => d.id === selectedDomainId);
+    if (!selectedDomain) {
+      return "";
+    }
+    return `${emailName.trim()}@${selectedDomain.domain}`;
   };
 
   const openDeleteEmailDialog = (email: EmailSender) => {
@@ -401,6 +465,66 @@ const AppSettings: React.FC = () => {
     return emailFormData.email !== selectedEmail.email;
   };
 
+  // Domain management functions
+  const openAddDomainDialog = () => {
+    setDomainFormData({ domain: "" });
+    setDomainDialogOpen(true);
+    setError(null);
+    setSuccess(null);
+  };
+
+  const closeDomainDialog = () => {
+    setDomainDialogOpen(false);
+    setDomainFormData({ domain: "" });
+    setError(null);
+    setSuccess(null);
+  };
+
+  const handleSaveDomain = async () => {
+    try {
+      setError(null);
+
+      if (!domainFormData.domain.trim()) {
+        setError("Domain is required");
+        return;
+      }
+
+      const createData: CreateDomainRequest = {
+        domain: domainFormData.domain.trim(),
+      };
+      await domainService.createDomain(createData);
+      setSuccess("Domain created successfully");
+      await loadDomains();
+      setTimeout(() => {
+        closeDomainDialog();
+      }, 1000);
+    } catch (err: any) {
+      setError(err.response?.data?.error || "Failed to create domain");
+    }
+  };
+
+  const openDeleteDomainDialog = (domain: Domain) => {
+    setDomainToDelete(domain);
+    setDeleteDomainDialogOpen(true);
+  };
+
+  const handleDeleteDomain = async () => {
+    if (!domainToDelete) return;
+
+    try {
+      setError(null);
+      await domainService.deleteDomain(domainToDelete.id);
+      setSuccess("Domain deleted successfully");
+      setDeleteDomainDialogOpen(false);
+      setDomainToDelete(null);
+      await loadDomains();
+    } catch (err: any) {
+      setError(err.response?.data?.error || "Failed to delete domain");
+      setDeleteDomainDialogOpen(false);
+      setDomainToDelete(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -540,6 +664,57 @@ const AppSettings: React.FC = () => {
         </div>
       )}
 
+      {/* Domains Section */}
+      <div className="mb-8">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold text-gray-900">Email Domains</h2>
+          <button
+            type="button"
+            onClick={openAddDomainDialog}
+            className="inline-flex items-center rounded-md bg-primary-800 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-800 cursor-pointer"
+          >
+            Add Domain
+          </button>
+        </div>
+
+        {domains.length === 0 ? (
+          <div className="bg-white shadow-xs rounded-xl p-8 text-center">
+            <p className="text-gray-500">No domains configured. Add one to get started.</p>
+          </div>
+        ) : (
+          <ul
+            role="list"
+            className="divide-y divide-gray-100 overflow-hidden bg-white shadow-xs outline-1 outline-gray-900/5 sm:rounded-xl"
+          >
+            {domains.map((domain) => (
+              <li key={domain.id} className="relative py-5 hover:bg-gray-50">
+                <div className="px-4 sm:px-6 lg:px-8">
+                  <div className="mx-auto flex max-w-4xl justify-between gap-x-6">
+                    <div className="flex min-w-0 gap-x-4 items-center">
+                      <div className="min-w-0 flex-auto">
+                        <p className="text-sm/6 font-semibold text-gray-900">{domain.domain}</p>
+                        <p className="mt-1 text-xs text-gray-500">
+                          Added {new Date(domain.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-x-4">
+                      <button
+                        type="button"
+                        onClick={() => openDeleteDomainDialog(domain)}
+                        className="text-gray-400 hover:text-red-600 cursor-pointer"
+                      >
+                        <TrashIcon className="size-5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
       {/* Email Senders Section */}
       <div className="mb-8">
         <div className="flex justify-between items-center mb-4">
@@ -669,22 +844,141 @@ const AppSettings: React.FC = () => {
                     <div className="flex flex-1 flex-col justify-between">
                       <div className="divide-y divide-gray-200 px-4 sm:px-6">
                         <div className="space-y-6 pt-6 pb-5">
-                          <div>
-                            <label htmlFor="email" className="block text-sm/6 font-medium text-gray-900">
-                              Email Address
-                            </label>
-                            <div className="mt-2">
-                              <input
-                                id="email"
-                                name="email"
-                                type="email"
-                                value={emailFormData.email}
-                                onChange={(e) => setEmailFormData({ ...emailFormData, email: e.target.value })}
-                                className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-800 sm:text-sm/6"
-                                placeholder="sender@example.com"
-                              />
+                          {isEditMode ? (
+                            <div>
+                              <label htmlFor="email" className="block text-sm/6 font-medium text-gray-900">
+                                Email Address
+                              </label>
+                              <div className="mt-2">
+                                <input
+                                  id="email"
+                                  name="email"
+                                  type="email"
+                                  value={emailFormData.email}
+                                  onChange={(e) => setEmailFormData({ ...emailFormData, email: e.target.value })}
+                                  className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-800 sm:text-sm/6"
+                                  placeholder="sender@example.com"
+                                />
+                              </div>
                             </div>
-                          </div>
+                          ) : (
+                            <>
+                              {(() => {
+                                const hasAtSymbol = emailFormData.email.includes("@");
+                                const shouldUseDirect = useDirectEmail || hasAtSymbol;
+                                
+                                return (
+                                  <>
+                                    {!shouldUseDirect && domains.length > 0 ? (
+                                      <>
+                                        <div>
+                                          <label htmlFor="emailName" className="block text-sm/6 font-medium text-gray-900">
+                                            Email Name
+                                          </label>
+                                          <div className="mt-2">
+                                            <input
+                                              id="emailName"
+                                              name="emailName"
+                                              type="text"
+                                              value={emailName}
+                                              onChange={(e) => {
+                                                setEmailName(e.target.value);
+                                                if (e.target.value.includes("@")) {
+                                                  setUseDirectEmail(true);
+                                                  setEmailFormData({ email: e.target.value });
+                                                }
+                                              }}
+                                              className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-800 sm:text-sm/6"
+                                              placeholder="admin"
+                                            />
+                                          </div>
+                                        </div>
+                                        <div>
+                                          <label htmlFor="domain" className="block text-sm/6 font-medium text-gray-900">
+                                            Domain
+                                          </label>
+                                          <div className="mt-2">
+                                            <select
+                                              id="domain"
+                                              name="domain"
+                                              value={selectedDomainId || ""}
+                                              onChange={(e) => setSelectedDomainId(e.target.value ? parseInt(e.target.value) : null)}
+                                              className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-800 sm:text-sm/6"
+                                            >
+                                              {domains.map((domain) => (
+                                                <option key={domain.id} value={domain.id}>
+                                                  @{domain.domain}
+                                                </option>
+                                              ))}
+                                            </select>
+                                          </div>
+                                        </div>
+                                        {getEmailPreview() && (
+                                          <div>
+                                            <label className="block text-sm/6 font-medium text-gray-900">
+                                              Email Preview
+                                            </label>
+                                            <div className="mt-2 p-2 bg-gray-50 rounded-md text-sm text-gray-700">
+                                              {getEmailPreview()}
+                                            </div>
+                                          </div>
+                                        )}
+                                        <div>
+                                          <button
+                                            type="button"
+                                            onClick={() => setUseDirectEmail(true)}
+                                            className="text-sm text-primary-600 hover:text-primary-800"
+                                          >
+                                            Or enter email directly
+                                          </button>
+                                        </div>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <div>
+                                          <label htmlFor="email" className="block text-sm/6 font-medium text-gray-900">
+                                            Email Address
+                                          </label>
+                                          <div className="mt-2">
+                                            <input
+                                              id="email"
+                                              name="email"
+                                              type="email"
+                                              value={emailFormData.email}
+                                              onChange={(e) => {
+                                                setEmailFormData({ ...emailFormData, email: e.target.value });
+                                                if (!e.target.value.includes("@") && domains.length > 0) {
+                                                  setUseDirectEmail(false);
+                                                }
+                                              }}
+                                              className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-800 sm:text-sm/6"
+                                              placeholder="sender@example.com"
+                                            />
+                                          </div>
+                                        </div>
+                                        {domains.length > 0 && (
+                                          <div>
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                setUseDirectEmail(false);
+                                                setEmailFormData({ email: "" });
+                                                setEmailName("");
+                                                setSelectedDomainId(domains[0].id);
+                                              }}
+                                              className="text-sm text-primary-600 hover:text-primary-800"
+                                            >
+                                              Or use name + domain
+                                            </button>
+                                          </div>
+                                        )}
+                                      </>
+                                    )}
+                                  </>
+                                );
+                              })()}
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1102,6 +1396,157 @@ const AppSettings: React.FC = () => {
                   onClick={() => {
                     setDeleteEmailDialogOpen(false);
                     setEmailToDelete(null);
+                  }}
+                  className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </DialogPanel>
+          </div>
+        </div>
+      </Dialog>
+
+      {/* Domain Management Dialog */}
+      <Dialog open={domainDialogOpen} onClose={closeDomainDialog} className="relative z-50">
+        <div className="fixed inset-0 bg-black/25" />
+        <div className="fixed inset-0 overflow-hidden z-50">
+          <div className="absolute inset-0 overflow-hidden">
+            <div className="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10 sm:pl-16">
+              <DialogPanel
+                transition
+                className="pointer-events-auto w-screen max-w-md transform transition duration-500 ease-in-out data-closed:translate-x-full sm:duration-700"
+              >
+                <form className="relative flex h-full flex-col divide-y divide-gray-200 bg-white shadow-xl">
+                  <div className="h-0 flex-1 overflow-y-auto">
+                    <div className="bg-primary-700 px-4 py-6 sm:px-6">
+                      <div className="flex items-center justify-between">
+                        <DialogTitle className="text-base font-semibold text-white">
+                          Add Domain
+                        </DialogTitle>
+                        <div className="ml-3 flex h-7 items-center">
+                          <button
+                            type="button"
+                            onClick={closeDomainDialog}
+                            className="relative rounded-md text-primary-100 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white cursor-pointer"
+                          >
+                            <span className="absolute -inset-2.5" />
+                            <span className="sr-only">Close panel</span>
+                            <XMarkIcon aria-hidden="true" className="size-6" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {(error || success) && (
+                      <div className="px-4 sm:px-6 pt-4">
+                        {error && (
+                          <div className="mb-2 p-3 bg-red-50 border border-red-200 rounded-md text-red-700 text-sm">
+                            {error}
+                          </div>
+                        )}
+                        {success && (
+                          <div className="mb-2 p-3 bg-green-50 border border-green-200 rounded-md text-green-700 text-sm">
+                            {success}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="flex flex-1 flex-col justify-between">
+                      <div className="divide-y divide-gray-200 px-4 sm:px-6">
+                        <div className="space-y-6 pt-6 pb-5">
+                          <div>
+                            <label htmlFor="domain" className="block text-sm/6 font-medium text-gray-900">
+                              Domain
+                            </label>
+                            <div className="mt-2">
+                              <input
+                                id="domain"
+                                name="domain"
+                                type="text"
+                                value={domainFormData.domain}
+                                onChange={(e) => setDomainFormData({ ...domainFormData, domain: e.target.value })}
+                                className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-800 sm:text-sm/6"
+                                placeholder="example.com"
+                              />
+                              <p className="mt-1 text-xs text-gray-500">
+                                Enter the domain without the @ symbol (e.g., example.com)
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex shrink-0 justify-end px-4 py-4">
+                    <button
+                      type="button"
+                      onClick={closeDomainDialog}
+                      className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50 cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSaveDomain}
+                      className="ml-4 inline-flex justify-center rounded-md bg-primary-800 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-primary-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-800 cursor-pointer"
+                    >
+                      Create
+                    </button>
+                  </div>
+                </form>
+              </DialogPanel>
+            </div>
+          </div>
+        </div>
+      </Dialog>
+
+      {/* Delete Domain Confirmation Dialog */}
+      <Dialog open={deleteDomainDialogOpen} onClose={setDeleteDomainDialogOpen} className="relative z-50">
+        <DialogBackdrop
+          transition
+          className="fixed inset-0 bg-gray-500/75 transition-opacity data-closed:opacity-0 data-enter:duration-300 data-enter:ease-out data-leave:duration-200 data-leave:ease-in"
+        />
+
+        <div className="fixed inset-0 z-10 w-screen overflow-y-auto">
+          <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+            <DialogPanel
+              transition
+              className="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all data-closed:translate-y-4 data-closed:opacity-0 data-enter:duration-300 data-enter:ease-out data-leave:duration-200 data-leave:ease-in sm:my-8 sm:w-full sm:max-w-lg data-closed:sm:translate-y-0 data-closed:sm:scale-95"
+            >
+              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="sm:flex sm:items-start">
+                  <div className="mx-auto flex size-12 shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:size-10">
+                    <ExclamationTriangleIcon aria-hidden="true" className="size-6 text-red-600" />
+                  </div>
+                  <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                    <DialogTitle as="h3" className="text-base font-semibold text-gray-900">
+                      Delete domain
+                    </DialogTitle>
+                    <div className="mt-2">
+                      <p className="text-sm text-gray-500">
+                        Are you sure you want to delete {domainToDelete?.domain}? This action cannot be undone. If any email senders are using this domain, deletion will be prevented.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
+                <button
+                  type="button"
+                  onClick={handleDeleteDomain}
+                  className="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-red-500 sm:ml-3 sm:w-auto cursor-pointer"
+                >
+                  Delete
+                </button>
+                <button
+                  type="button"
+                  data-autofocus
+                  onClick={() => {
+                    setDeleteDomainDialogOpen(false);
+                    setDomainToDelete(null);
                   }}
                   className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto cursor-pointer"
                 >

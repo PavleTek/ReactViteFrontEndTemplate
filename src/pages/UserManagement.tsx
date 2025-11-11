@@ -695,6 +695,19 @@ const UserManagement: React.FC = () => {
                                                 }
                                               }
                                             }}
+                                            onKeyDown={(e) => {
+                                              if ((isEditMode || isCreateMode) && e.key === "Enter") {
+                                                e.preventDefault();
+                                                if (formData.roleIds.includes(role.id)) {
+                                                  setFormData({
+                                                    ...formData,
+                                                    roleIds: formData.roleIds.filter((id) => id !== role.id),
+                                                  });
+                                                } else {
+                                                  setFormData({ ...formData, roleIds: [...formData.roleIds, role.id] });
+                                                }
+                                              }
+                                            }}
                                             disabled={!isEditMode && !isCreateMode}
                                             className={`col-start-1 row-start-1 appearance-none rounded-sm border border-gray-300 bg-white checked:border-primary-600 checked:bg-primary-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 disabled:border-gray-300 disabled:bg-gray-100 disabled:checked:bg-gray-100 ${
                                               isEditMode || isCreateMode ? "cursor-pointer" : ""

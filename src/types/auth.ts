@@ -85,6 +85,16 @@ export interface CreateEmailRequest {
   email: string;
 }
 
+export interface Domain {
+  id: number;
+  domain: string;
+  createdAt: string;
+}
+
+export interface CreateDomainRequest {
+  domain: string;
+}
+
 export interface UpdateEmailRequest {
   email?: string;
 }
