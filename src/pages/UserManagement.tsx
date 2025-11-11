@@ -762,14 +762,14 @@ const UserManagement: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setReset2FADialogOpen(true)}
-                          className="inline-flex justify-center rounded-md bg-orange-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-orange-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600 cursor-pointer"
+                          className="inline-flex justify-center rounded-md bg-orange-600 px-2 py-2 text-xs font-semibold text-white shadow-xs hover:bg-orange-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600 cursor-pointer sm:px-3 sm:text-sm"
                         >
                           Reset 2FA
                         </button>
                         <button
                           type="button"
                           onClick={() => setDeleteDialogOpen(true)}
-                          className="inline-flex justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-red-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 cursor-pointer"
+                          className="inline-flex justify-center rounded-md bg-red-600 px-2 py-2 text-xs font-semibold text-white shadow-xs hover:bg-red-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 cursor-pointer sm:px-3 sm:text-sm"
                         >
                           Delete User
                         </button>
@@ -777,7 +777,7 @@ const UserManagement: React.FC = () => {
                     )}
                     {!isCreateMode && (!selectedUser || !currentUser || selectedUser.id === currentUser.id) && <div />}
                     {isCreateMode && <div />}
-                    <div className="flex gap-x-3 ml-auto">
+                    <div className={`flex gap-x-3 ${!isCreateMode && selectedUser && currentUser && selectedUser.id !== currentUser.id ? 'ml-2 sm:ml-auto' : 'ml-auto'}`}>
                       <button
                         type="button"
                         onClick={isEditMode || isCreateMode ? handleCancel : closeDialog}
